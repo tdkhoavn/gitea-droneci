@@ -1,0 +1,91 @@
+version: "3"
+
+services:
+
+  gitea:
+    image: gitea/gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - ROOT_URL=http://gitea:3000
+      - DB_TYPE=postgres
+      - DB_HOST=gitea-db:5432
+      - DB_NAME=gitea
+      - DB_USER=postgres
+      - DB_PASSWD=postgres
+      - SKIP_TLS_VERIFY=true
+    restart: always
+    volumes:
+      - ./volumes/gitea-app:/data
+    links:
+      - gitea-db
+    ports:
+      - 22:22
+      - 3000:3000
+    dns:
+      - 192.168.0.1
+
+  gitea-db:
+    image: postgres:alpine
+    ports:
+      - 5432:5432
+    restart: always
+    volumes:
+      - ./volumes/gitea-db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=gitea
+
+  drone:
+    image: drone/drone
+    ports:
+      - 8000:8000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./volumes/drone:/var/lib/drone/
+    restart: always
+    depends_on:
+      - gitea
+    links:
+      - gitea
+    environment:
+      - DRONE_AGENTS_ENABLED=true
+      - DRONE_GITEA_CLIENT_ID=c5fa2066-fbda-4e0c-bf6f-adae8e5b0ca5
+      - DRONE_GITEA_CLIENT_SECRET=3KcWBJJwC7rHLvg3HWWReLEXnxZFo1rXYvWbvLWLNIk=
+      - DRONE_GITEA_SERVER=http://gitea:3000
+      - DRONE_GIT_ALWAYS_AUTH=false
+      - DRONE_TLS_AUTOCERT=false
+      - DRONE_SERVER_PORT=:8000
+      - DRONE_SERVER_HOST=drone:8000
+      - DRONE_SERVER_PROTO=http
+      - DRONE_RPC_SECRET=secret
+      - DRONE_RUNNER_NETWORKS=deployment_default
+    dns:
+      - 192.168.0.1
+
+  drone-runner-docker:
+    image: drone/drone-runner-docker:latest
+    restart: always
+    depends_on:
+      - drone
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    links:
+      - drone
+      - gitea
+    environment:
+      - DRONE_RPC_HOST=drone:8000
+      - DRONE_RPC_PROTO=http
+      - DRONE_RPC_SECRET=secret
+      - DRONE_RUNNER_NAME=drone-runner-docker
+      - DRONE_UI_USERNAME=test
+      - DRONE_UI_PASSWORD=test
+      - DRONE_RUNNER_NETWORKS=deployment_default
+    dns:
+      - 192.168.0.1
+
+
+volumes:
+  gitea-app:
+  gitea-db:
