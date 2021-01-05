@@ -1,1 +1,9 @@
-/volumes
+volumes/drone/*
+!volumes/drone/.gitkeep
+volumes/gitea-db/*
+!volumes/gitea-db/.gitkeep
+volumes/gitea-app/git/*
+volumes/gitea-app/ssh/*
+volumes/gitea-app/gitea/*
+!volumes/gitea-app/gitea/conf
+!volumes/gitea-app/gitea/conf/app.ini
